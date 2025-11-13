@@ -103,10 +103,11 @@ public class Parser {
         next(); // in
         Token start = next(); // 0
         next(); // ..
-        Token end = next(); // 5
-        next(); // {
 
-        gen.emit("for (int " + var.text + " = " + start.text + "; " + var.text + " < " + end.text + "; ++" + var.text + ") {");
+        String[] partes = start.text.split("\\.\\.");
+        String limit = partes[1];
+
+        gen.emit("for (int " + var.text + " = 0; " + var.text + " < " + limit + "; " + var.text + "++) {");
         while (!peek().type.equals(TokenType.RBRACE) && peek().type != TokenType.EOF) statement();
         next(); // fecha }
         gen.emit("}");
@@ -116,7 +117,12 @@ public class Parser {
         next(); // print
         next(); // (
         Token content = next();
-        gen.emit("cout << " + formatValue(content) + " << endl;");
+        gen.emit("cout << " + formatValue(content));
+        while(peek().type == TokenType.PLUS) {
+            next();
+            gen.emit(" + " + next().text);
+        }
+        gen.emit(" << endl;");
         next(); // )
     }
 
@@ -124,11 +130,12 @@ public class Parser {
         next(); // input
         next(); // (
         Token prompt = next(); // STRING
+        System.out.println(peek().text);
         next(); // ,
         Token var = next(); // IDENT
         next(); // )
 
-        gen.emit("cout << " + "\"" + prompt.text + "\" << endl;");
+        gen.emit("cout << " + "\"" + prompt.text + "\";");
         gen.emit("cin >> " + var.text + ";");
     }
 
