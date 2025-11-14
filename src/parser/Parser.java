@@ -34,6 +34,9 @@ public class Parser {
             case LET:
                 parseVarDecl();
                 break;
+            case IDENT:
+                parseIdent();
+                break;
             case IF:
                 parseIf();
                 break;
@@ -47,7 +50,7 @@ public class Parser {
                 parseInput();
                 break;
             default:
-                next(); // ignora por enquanto
+                next();
                 break;
         }
     }
@@ -74,6 +77,14 @@ public class Parser {
         } else {
             gen.emit(cppType + " " + name.text + ";");
         }
+    }
+
+    private void parseIdent() {
+        Token name = next();
+        next(); // =
+        Token value = next();
+
+        gen.emit(name.text + " = " + formatValue(value) + ";");
     }
 
     private void parseIf() {
@@ -120,7 +131,7 @@ public class Parser {
         gen.emit("cout << " + formatValue(content));
         while(peek().type == TokenType.PLUS) {
             next();
-            gen.emit(" + " + next().text);
+            gen.emit(" << " + next().text);
         }
         gen.emit(" << endl;");
         next(); // )

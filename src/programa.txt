@@ -1,6 +1,8 @@
 let x: int = 10
+let y: int
 if x > 5 {
     print("maior que 5")
+    y = 10
 } else {
     print("menor ou igual a 5")
 }
@@ -10,3 +12,4 @@ for i in 0..3 {
 let nome: text
 input("Digite seu nome: ", nome)
 print("Olá, " + nome)
+print("Seu numero e: " + y)
