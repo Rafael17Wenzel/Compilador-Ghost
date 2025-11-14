@@ -1,0 +1,12 @@
+let x: int = 10
+if x > 5 {
+    print("maior que 5")
+} else {
+    print("menor ou igual a 5")
+}
+for i in 0..3 {
+    print(i)
+}
+let nome: text
+input("Digite seu nome: ", nome)
+print("Olá, " + nome)

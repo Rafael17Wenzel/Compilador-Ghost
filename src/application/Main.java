@@ -4,23 +4,30 @@ import lexer.*;
 import parser.*;
 import codegen.*;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.io.IOException;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-        String code =
-            "let x: int = 10\n" +
-            "if x > 5 {\n" +
-            "    print(\"maior que 5\")\n" +
-            "} else {\n" +
-            "    print(\"menor ou igual a 5\")\n" +
-            "}\n" +
-            "for i in 0..3 {\n" +
-            "    print(i)\n" +
-            "}\n" +
-            "let nome: text\n" +
-            "input(\"Digite seu nome: \", nome)\n" +
-            "print(\"Olá, \" + nome)\n";
+
+        // Se o usuário não passar um arquivo, mostra ajuda
+        if (args.length == 0) {
+            System.out.println("Uso: java -jar compilador.jar <arquivo>");
+            return;
+        }
+
+        String filename = args[0];
+        String code = "";
+
+        try {
+            code = new String(Files.readAllBytes(Paths.get(filename)));
+        } catch (IOException e) {
+            System.out.println("Erro ao ler arquivo: " + filename);
+            e.printStackTrace();
+            return;
+        }
 
         Lexer lexer = new Lexer(code);
         List<Token> tokens = lexer.tokenize();
