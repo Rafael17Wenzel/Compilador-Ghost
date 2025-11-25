@@ -37,7 +37,7 @@ public class Lexer {
             }
 
             if (Character.isDigit(c)) {
-                String num = readWhile(ch -> Character.isDigit(ch) || ch == '.');
+                String num = readWhile(Character::isDigit); // removido ponto
                 tokens.add(new Token(TokenType.NUMBER, num));
                 continue;
             }
@@ -52,6 +52,7 @@ public class Lexer {
                 case '{': tokens.add(new Token(TokenType.LBRACE, "{")); next(); break;
                 case '}': tokens.add(new Token(TokenType.RBRACE, "}")); next(); break;
                 case ':': tokens.add(new Token(TokenType.COLON, ":")); next(); break;
+                case ',': tokens.add(new Token(TokenType.COMMA, ",")); next(); break;
                 case '=':
                     next();
                     if (peek() == '=') { next(); tokens.add(new Token(TokenType.EQEQ, "==")); }
@@ -81,10 +82,10 @@ public class Lexer {
                 case '.':
                     next();
                     if (peek() == '.') { next(); tokens.add(new Token(TokenType.DOTS, "..")); }
+                    else tokens.add(new Token(TokenType.DOT, "."));
                     break;
                 default:
-                    tokens.add(new Token(TokenType.UNKNOWN, String.valueOf(c)));
-                    next();
+                    next(); // ignora caracteres inválidos
             }
         }
 

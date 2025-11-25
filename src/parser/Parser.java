@@ -2,56 +2,39 @@ package parser;
 
 import lexer.*;
 import codegen.*;
+import semantic.SemanticAnalyzer;
 import java.util.*;
 
 public class Parser {
     private final List<Token> tokens;
     private int pos = 0;
     private final CodeGenerator gen;
+    private final SemanticAnalyzer sem;
 
     public Parser(List<Token> tokens, CodeGenerator gen) {
         this.tokens = tokens;
         this.gen = gen;
+        this.sem = new SemanticAnalyzer();
     }
 
-    private Token peek() {
-        return pos < tokens.size() ? tokens.get(pos) : new Token(TokenType.EOF, "");
-    }
-
-    private Token next() {
-        return pos < tokens.size() ? tokens.get(pos++) : new Token(TokenType.EOF, "");
-    }
+    private Token peek() { return pos < tokens.size() ? tokens.get(pos) : new Token(TokenType.EOF, ""); }
+    private Token next() { return pos < tokens.size() ? tokens.get(pos++) : new Token(TokenType.EOF, ""); }
 
     public void parse() {
-        while (peek().type != TokenType.EOF) {
-            statement();
-        }
+        while (peek().type != TokenType.EOF) statement();
+        sem.printSymbolTable();
     }
 
     private void statement() {
         Token token = peek();
         switch (token.type) {
-            case LET:
-                parseVarDecl();
-                break;
-            case IDENT:
-                parseIdent();
-                break;
-            case IF:
-                parseIf();
-                break;
-            case FOR:
-                parseFor();
-                break;
-            case PRINT:
-                parsePrint();
-                break;
-            case INPUT:
-                parseInput();
-                break;
-            default:
-                next();
-                break;
+            case LET: parseVarDecl(); break;
+            case IDENT: parseIdent(); break;
+            case IF: parseIf(); break;
+            case FOR: parseFor(); break;
+            case PRINT: parsePrint(); break;
+            case INPUT: parseInput(); break;
+            default: next(); break;
         }
     }
 
@@ -70,9 +53,12 @@ public class Parser {
             default: cppType = "auto"; break;
         }
 
+        sem.declareVariable(name.text, cppType);
+
         if (peek().type == TokenType.EQ) {
-            next(); // =
+            next();
             Token value = next();
+            sem.checkAssignment(name.text, value);
             gen.emit(cppType + " " + name.text + " = " + formatValue(value) + ";");
         } else {
             gen.emit(cppType + " " + name.text + ";");
@@ -83,7 +69,7 @@ public class Parser {
         Token name = next();
         next(); // =
         Token value = next();
-
+        sem.checkAssignment(name.text, value);
         gen.emit(name.text + " = " + formatValue(value) + ";");
     }
 
@@ -91,18 +77,17 @@ public class Parser {
         next(); // if
         StringBuilder cond = new StringBuilder();
         while (!peek().type.equals(TokenType.LBRACE)) cond.append(next().text).append(" ");
-        next(); // abre {
+        next(); // {
         gen.emit("if (" + cond.toString().trim() + ") {");
 
         while (!peek().type.equals(TokenType.RBRACE) && peek().type != TokenType.EOF) statement();
-        next(); // fecha }
+        next(); // }
 
         if (peek().type == TokenType.ELSE) {
-            next(); // else
-            next(); // {
+            next(); next(); // {
             gen.emit("} else {");
             while (!peek().type.equals(TokenType.RBRACE) && peek().type != TokenType.EOF) statement();
-            next(); // fecha }
+            next(); // }
         }
 
         gen.emit("}");
@@ -110,17 +95,18 @@ public class Parser {
 
     private void parseFor() {
         next(); // for
-        Token var = next(); // i
+        Token var = next();
         next(); // in
-        Token start = next(); // 0
-        next(); // ..
+        Token start = next(); // NUMBER
+        next(); // DOTS
+        Token end = next();   // NUMBER
 
-        String[] partes = start.text.split("\\.\\.");
-        String limit = partes[1];
+        sem.declareVariable(var.text, "int");
+        gen.emit("for (int " + var.text + " = " + start.text + "; " + var.text + " < " + end.text + "; " + var.text + "++) {");
 
-        gen.emit("for (int " + var.text + " = 0; " + var.text + " < " + limit + "; " + var.text + "++) {");
+        next(); // {
         while (!peek().type.equals(TokenType.RBRACE) && peek().type != TokenType.EOF) statement();
-        next(); // fecha }
+        next(); // }
         gen.emit("}");
     }
 
@@ -129,10 +115,7 @@ public class Parser {
         next(); // (
         Token content = next();
         gen.emit("cout << " + formatValue(content));
-        while(peek().type == TokenType.PLUS) {
-            next();
-            gen.emit(" << " + next().text);
-        }
+        while(peek().type == TokenType.PLUS) { next(); gen.emit(" << " + formatValue(next())); }
         gen.emit(" << endl;");
         next(); // )
     }
@@ -141,20 +124,18 @@ public class Parser {
         next(); // input
         next(); // (
         Token prompt = next(); // STRING
-        System.out.println(peek().text);
-        next(); // ,
-        Token var = next(); // IDENT
+        next(); // COMMA
+        Token var = next();    // IDENT
+        sem.checkVariableExists(var.text);
         next(); // )
 
-        gen.emit("cout << " + "\"" + prompt.text + "\";");
+        gen.emit("cout << \"" + prompt.text + "\";");
         gen.emit("cin >> " + var.text + ";");
     }
 
     private String formatValue(Token token) {
-        if (token.type == TokenType.STRING) {
-            return "\"" + token.text + "\"";
-        } else {
-            return token.text;
-        }
+        if (token.type == TokenType.STRING) return "\"" + token.text + "\"";
+        if (token.type == TokenType.IDENT) { sem.checkVariableExists(token.text); return token.text; }
+        return token.text;
     }
 }

@@ -13,6 +13,5 @@ public enum TokenType {
     PLUS, MINUS, STAR, SLASH,
     EQ, EQEQ, NOTEQ, GT, GTEQ, LT, LTEQ,
     COLON, DOTS, LPAREN, RPAREN, LBRACE, RBRACE,
-
-    UNKNOWN
+    COMMA, DOT
 }
