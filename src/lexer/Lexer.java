@@ -15,6 +15,10 @@ public class Lexer {
         return pos < input.length() ? input.charAt(pos) : '\0';
     }
 
+    private char peekNext() {
+        return (pos + 1) < input.length() ? input.charAt(pos + 1) : '\0';
+    }
+
     private char next() {
         return pos < input.length() ? input.charAt(pos++) : '\0';
     }
@@ -37,8 +41,7 @@ public class Lexer {
             }
 
             if (Character.isDigit(c)) {
-                String num = readWhile(ch -> Character.isDigit(ch) || ch == '.');
-                tokens.add(new Token(TokenType.NUMBER, num));
+                tokens.add(readNumber());
                 continue;
             }
 
@@ -52,6 +55,10 @@ public class Lexer {
                 case '{': tokens.add(new Token(TokenType.LBRACE, "{")); next(); break;
                 case '}': tokens.add(new Token(TokenType.RBRACE, "}")); next(); break;
                 case ':': tokens.add(new Token(TokenType.COLON, ":")); next(); break;
+                case ',':
+                    tokens.add(new Token(TokenType.COMMA, ","));
+                    next();
+                    break;
                 case '=':
                     next();
                     if (peek() == '=') { next(); tokens.add(new Token(TokenType.EQEQ, "==")); }
@@ -79,8 +86,8 @@ public class Lexer {
                     tokens.add(new Token(TokenType.STRING, str.toString()));
                     break;
                 case '.':
-                    next();
-                    if (peek() == '.') { next(); tokens.add(new Token(TokenType.DOTS, "..")); }
+                    if (peekNext() == '.') { next(); next(); tokens.add(new Token(TokenType.DOTS, "..")); }
+                    else { tokens.add(new Token(TokenType.UNKNOWN, ".")); next(); }
                     break;
                 default:
                     tokens.add(new Token(TokenType.UNKNOWN, String.valueOf(c)));
@@ -90,6 +97,17 @@ public class Lexer {
 
         tokens.add(new Token(TokenType.EOF, ""));
         return tokens;
+    }
+
+    private Token readNumber() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(next()); // primeiro dígito
+
+        while (Character.isDigit(peek()) || (peek() == '.' && Character.isDigit(peekNext()))) {
+            sb.append(next());
+        }
+
+        return new Token(TokenType.NUMBER, sb.toString());
     }
 
     private String readWhile(java.util.function.Predicate<Character> cond) {

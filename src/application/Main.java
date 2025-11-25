@@ -3,6 +3,8 @@ package application;
 import lexer.*;
 import parser.*;
 import codegen.*;
+import semantic.*;
+import ast.*;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -11,8 +13,6 @@ import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
-
-        // Se o usuário não passar um arquivo, mostra ajuda
         if (args.length == 0) {
             System.out.println("Uso: java -jar compilador.jar <arquivo>");
             return;
@@ -28,7 +28,6 @@ public class Main {
             e.printStackTrace();
             return;
         }
-
         Lexer lexer = new Lexer(code);
         List<Token> tokens = lexer.tokenize();
 

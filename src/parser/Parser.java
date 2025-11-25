@@ -22,6 +22,13 @@ public class Parser {
         return pos < tokens.size() ? tokens.get(pos++) : new Token(TokenType.EOF, "");
     }
 
+    private void expect(TokenType type, String message) {
+        if (peek().type != type) {
+            throw new RuntimeException(message + ", encontrado: " + peek().text);
+        }
+        next();
+    }
+
     public void parse() {
         while (peek().type != TokenType.EOF) {
             statement();
@@ -29,80 +36,66 @@ public class Parser {
     }
 
     private void statement() {
-        Token token = peek();
-        switch (token.type) {
-            case LET:
-                parseVarDecl();
-                break;
-            case IDENT:
-                parseIdent();
-                break;
-            case IF:
-                parseIf();
-                break;
-            case FOR:
-                parseFor();
-                break;
-            case PRINT:
-                parsePrint();
-                break;
-            case INPUT:
-                parseInput();
-                break;
-            default:
-                next();
-                break;
+        switch (peek().type) {
+            case LET: parseVarDecl(); break;
+            case IDENT: parseAssignment(); break;
+            case IF: parseIf(); break;
+            case FOR: parseFor(); break;
+            case PRINT: parsePrint(); break;
+            case INPUT: parseInput(); break;
+            default: next(); break;
         }
     }
 
     private void parseVarDecl() {
         next(); // let
-        Token name = next();
-        next(); // :
-        Token type = next();
+        Token name = next(); // nome
+        expect(TokenType.COLON, "Esperado ':'");
+        Token type = next(); // tipo
 
-        String cppType;
-        switch (type.text) {
-            case "int": cppType = "int"; break;
-            case "real": cppType = "double"; break;
-            case "text": cppType = "string"; break;
-            case "bool": cppType = "bool"; break;
-            default: cppType = "auto"; break;
-        }
+        String cppType = switch (type.type) {
+            case INT -> "int";
+            case REAL -> "double";
+            case TEXT -> "string";
+            case BOOL_TYPE -> "bool";
+            default -> "auto";
+        };
 
         if (peek().type == TokenType.EQ) {
-            next(); // =
-            Token value = next();
-            gen.emit(cppType + " " + name.text + " = " + formatValue(value) + ";");
+            next();
+            String value = parseExpression();
+            gen.emit(cppType + " " + name.text + " = " + value + ";");
         } else {
             gen.emit(cppType + " " + name.text + ";");
         }
     }
 
-    private void parseIdent() {
+    private void parseAssignment() {
         Token name = next();
-        next(); // =
-        Token value = next();
-
-        gen.emit(name.text + " = " + formatValue(value) + ";");
+        expect(TokenType.EQ, "Esperado '='");
+        String value = parseExpression();
+        gen.emit(name.text + " = " + value + ";");
     }
 
     private void parseIf() {
         next(); // if
-        StringBuilder cond = new StringBuilder();
-        while (!peek().type.equals(TokenType.LBRACE)) cond.append(next().text).append(" ");
-        next(); // abre {
-        gen.emit("if (" + cond.toString().trim() + ") {");
+        String condition = parseExpression();
+        expect(TokenType.LBRACE, "Esperado '{'");
+        gen.emit("if (" + condition + ") {");
 
-        while (!peek().type.equals(TokenType.RBRACE) && peek().type != TokenType.EOF) statement();
-        next(); // fecha }
+        while (peek().type != TokenType.RBRACE && peek().type != TokenType.EOF) {
+            statement();
+        }
+        expect(TokenType.RBRACE, "Esperado '}'");
 
         if (peek().type == TokenType.ELSE) {
-            next(); // else
-            next(); // {
+            next();
+            expect(TokenType.LBRACE, "Esperado '{' após else");
             gen.emit("} else {");
-            while (!peek().type.equals(TokenType.RBRACE) && peek().type != TokenType.EOF) statement();
-            next(); // fecha }
+            while (peek().type != TokenType.RBRACE && peek().type != TokenType.EOF) {
+                statement();
+            }
+            expect(TokenType.RBRACE, "Esperado '}' após else");
         }
 
         gen.emit("}");
@@ -110,51 +103,78 @@ public class Parser {
 
     private void parseFor() {
         next(); // for
-        Token var = next(); // i
-        next(); // in
-        Token start = next(); // 0
-        next(); // ..
+        Token var = next();
+        expect(TokenType.IN, "Esperado 'in'");
+        Token start = next();
+        expect(TokenType.DOTS, "Esperado '..'");
+        Token end = next();
 
-        String[] partes = start.text.split("\\.\\.");
-        String limit = partes[1];
-
-        gen.emit("for (int " + var.text + " = 0; " + var.text + " < " + limit + "; " + var.text + "++) {");
-        while (!peek().type.equals(TokenType.RBRACE) && peek().type != TokenType.EOF) statement();
-        next(); // fecha }
+        gen.emit("for (int " + var.text + " = " + start.text + "; " + var.text + " <= " + end.text + "; " + var.text + "++) {");
+        expect(TokenType.LBRACE, "Esperado '{'");
+        while (peek().type != TokenType.RBRACE && peek().type != TokenType.EOF) {
+            statement();
+        }
+        expect(TokenType.RBRACE, "Esperado '}'");
         gen.emit("}");
     }
 
     private void parsePrint() {
         next(); // print
-        next(); // (
-        Token content = next();
-        gen.emit("cout << " + formatValue(content));
-        while(peek().type == TokenType.PLUS) {
+        expect(TokenType.LPAREN, "Esperado '('");
+        StringBuilder expr = new StringBuilder();
+        expr.append(parseExpression());
+        while (peek().type == TokenType.PLUS) {
             next();
-            gen.emit(" << " + next().text);
+            expr.append(" << ").append(parseExpression());
         }
-        gen.emit(" << endl;");
-        next(); // )
+        expect(TokenType.RPAREN, "Esperado ')'");
+        gen.emit("cout << " + expr + " << endl;");
     }
 
     private void parseInput() {
         next(); // input
-        next(); // (
-        Token prompt = next(); // STRING
-        System.out.println(peek().text);
-        next(); // ,
-        Token var = next(); // IDENT
-        next(); // )
-
-        gen.emit("cout << " + "\"" + prompt.text + "\";");
+        expect(TokenType.LPAREN, "Esperado '('");
+        Token prompt = next();
+        expect(TokenType.COMMA, "Esperado ','");
+        Token var = next();
+        expect(TokenType.RPAREN, "Esperado ')'");
+        gen.emit("cout << " + formatValue(prompt) + ";");
         gen.emit("cin >> " + var.text + ";");
     }
 
-    private String formatValue(Token token) {
-        if (token.type == TokenType.STRING) {
-            return "\"" + token.text + "\"";
+    private String parseExpression() {
+        StringBuilder sb = new StringBuilder();
+        Token token = peek();
+
+        if (token.type == TokenType.STRING || token.type == TokenType.BOOL || token.type == TokenType.NUMBER || token.type == TokenType.IDENT) {
+            sb.append(formatValue(next()));
+        } else if (token.type == TokenType.LPAREN) {
+            next();
+            sb.append("(").append(parseExpression()).append(")");
+            expect(TokenType.RPAREN, "Esperado ')'");
         } else {
-            return token.text;
+            throw new RuntimeException("Expressão inesperada: " + token.text);
         }
+
+        while (isOperator(peek().type)) {
+            sb.append(" ").append(next().text).append(" ").append(parseExpression());
+        }
+
+        return sb.toString();
+    }
+
+    private boolean isOperator(TokenType type) {
+        return switch (type) {
+            case PLUS, MINUS, STAR, SLASH, EQEQ, NOTEQ, GT, GTEQ, LT, LTEQ -> true;
+            default -> false;
+        };
+    }
+
+    private String formatValue(Token token) {
+        return switch (token.type) {
+            case STRING -> "\"" + token.text + "\"";
+            case BOOL -> token.text;
+            default -> token.text;
+        };
     }
 }

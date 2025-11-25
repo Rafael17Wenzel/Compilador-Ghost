@@ -1,12 +1,54 @@
-let x: int = 10
-if x > 5 {
-    print("maior que 5")
+// Teste completo do compilador
+
+// =======================
+// Declaração de variáveis
+// =======================
+let a : int = 10
+let b : real = 3.14
+let c : text = "Olá, Mundo!"
+let flag : bool = true
+let d : int  // variável sem inicialização
+
+// =======================
+// Atribuições e operações
+// =======================
+d = a + 5
+b = b * 2.0
+flag = a > 5
+
+// =======================
+// Entrada de dados
+// =======================
+input("Digite um número: ", a)
+
+// =======================
+// Condicional
+// =======================
+if flag == true {
+    print("Flag é verdadeira")
 } else {
-    print("menor ou igual a 5")
+    print("Flag é falsa")
 }
-for i in 0..3 {
-    print(i)
+
+// =======================
+// Loop
+// =======================
+for i in 0..5 {
+    print("Iteração: " + i)
+    a = a + i
 }
-let nome: text
-input("Digite seu nome: ", nome)
-print("Olá, " + nome)
+
+// =======================
+// Operadores relacionais
+// =======================
+if a != 0 {
+    print("a não é zero")
+}
+
+if b >= 6.28 {
+    print("b é maior ou igual a 6.28")
+}
+
+if c == "Olá, Mundo!" {
+    print("c está correto")
+}

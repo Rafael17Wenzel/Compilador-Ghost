@@ -13,3 +13,38 @@ let nome: text
 input("Digite seu nome: ", nome)
 print("Olá, " + nome)
 print("Seu numero e: " + y)
+
+let a : int = 10
+let b : real = 3.14
+let c : text = "Olá, Mundo!"
+let flag : bool = true
+let d : int
+
+d = a + 5
+b = b * 2.0
+flag = a > 5
+
+input("Digite um número: ", a)
+
+if flag == true {
+    print("Flag é verdadeira")
+} else {
+    print("Flag é falsa")
+}
+
+for i in 0..5 {
+    print("Iteração: " + i)
+    a = a + i
+}
+
+if a != 0 {
+    print("a não é zero")
+}
+
+if b >= 6.28 {
+    print("b é maior ou igual a 6.28")
+}
+
+if c == "Olá, Mundo!" {
+    print("c está correto")
+}
